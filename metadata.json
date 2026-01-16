@@ -1,0 +1,7 @@
+{
+  "name": "LensBench: OCR Pipeline Evaluator",
+  "description": "A comprehensive benchmarking tool for OCR pipelines. Evaluate prompt versions, different Gemini models, and receipt datasets with real-time accuracy, latency, and cost metrics.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
