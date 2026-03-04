@@ -14,6 +14,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
     { id: 'receipts', label: 'Receipts', icon: 'fa-receipt' },
     { id: 'benchmark', label: 'New Benchmark', icon: 'fa-play' },
     { id: 'results', label: 'Results', icon: 'fa-list-check' },
+    { id: 'leaderboard', label: 'Leaderboard', icon: 'fa-trophy' },
   ];
 
   return (
@@ -49,7 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
           <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2">Power Source</p>
           <div className="flex items-center gap-2">
             <i className="fas fa-bolt text-yellow-500"></i>
-            <span className="text-sm font-medium">Gemini Pro API</span>
+            <span className="text-sm font-medium">OpenRouter API</span>
           </div>
         </div>
       </div>

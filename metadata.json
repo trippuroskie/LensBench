@@ -1,7 +1,16 @@
 {
-  "name": "LensBench: OCR Pipeline Evaluator",
-  "description": "A comprehensive benchmarking tool for OCR pipelines. Evaluate prompt versions, different Gemini models, and receipt datasets with real-time accuracy, latency, and cost metrics.",
-  "requestFramePermissions": [
-    "camera"
+  "name": "LensBench",
+  "short_name": "LensBench",
+  "description": "A comprehensive benchmarking tool for OCR pipelines. Evaluate prompt versions, different OpenRouter models, and receipt datasets with real-time accuracy, latency, and cost metrics.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
   ]
 }

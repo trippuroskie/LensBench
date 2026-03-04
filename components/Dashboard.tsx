@@ -12,10 +12,13 @@ interface DashboardProps {
   promptsCount: number;
   results: BenchmarkResult[];
   onStartBenchmark: () => void;
+  customModels: Record<string, any>;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ receiptsCount, promptsCount, results, onStartBenchmark }) => {
-  const [activeModelFilters, setActiveModelFilters] = useState<ModelId[]>(Object.values(ModelId));
+const Dashboard: React.FC<DashboardProps> = ({ receiptsCount, promptsCount, results, onStartBenchmark, customModels }) => {
+  const allConfigs = { ...MODEL_CONFIGS, ...customModels };
+  const allModelIds = [...Object.keys(MODEL_CONFIGS), ...Object.keys(customModels)] as ModelId[];
+  const [activeModelFilters, setActiveModelFilters] = useState<ModelId[]>(allModelIds);
 
   const toggleModelFilter = (id: ModelId) => {
     setActiveModelFilters(prev => 
@@ -42,15 +45,28 @@ const Dashboard: React.FC<DashboardProps> = ({ receiptsCount, promptsCount, resu
 
   const chartData = useMemo(() => {
     // We take the last 15 filtered results to show trends
-    return filteredResults.slice(0, 15).reverse().map((r, i) => ({
-      name: `Run ${i + 1}`,
-      accuracy: Math.round(r.metrics.accuracy * 100),
-      latency: Math.round(r.metrics.latencyMs / 100) / 10,
-      modelName: MODEL_CONFIGS[r.modelId].name,
-      modelColor: MODEL_CONFIGS[r.modelId].color.split(' ')[1].replace('text-', '').replace('-700', ''), // Extracting base color
-      rawColor: r.modelId === ModelId.GEMINI_PRO ? '#9333ea' : r.modelId === ModelId.GEMINI_FLASH ? '#2563eb' : '#059669'
-    }));
-  }, [filteredResults]);
+    return filteredResults.slice(0, 15).reverse().map((r, i) => {
+      const config = allConfigs[r.modelId] || { name: r.modelId, color: 'text-slate-700' };
+      return {
+        name: `Run ${i + 1}`,
+        accuracy: Math.round(r.metrics.accuracy * 100),
+        latency: Math.round(r.metrics.latencyMs / 100) / 10,
+        modelName: config.name,
+        modelColor: config.color.split(' ')[1]?.replace('text-', '').replace('-700', '') || 'slate',
+        rawColor: (() => {
+          const colorClass = config.color;
+          if (colorClass.includes('green')) return '#16a34a';
+          if (colorClass.includes('orange')) return '#ea580c';
+          if (colorClass.includes('cyan')) return '#0891b2';
+          if (colorClass.includes('indigo')) return '#4f46e5';
+          if (colorClass.includes('sky')) return '#0284c7';
+          if (colorClass.includes('violet')) return '#7c3aed';
+          if (colorClass.includes('fuchsia')) return '#c026d3';
+          return '#2563eb'; // Default Blue
+        })()
+      };
+    });
+  }, [filteredResults, allConfigs]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -70,9 +86,8 @@ const Dashboard: React.FC<DashboardProps> = ({ receiptsCount, promptsCount, resu
       {/* Model Filter Bar */}
       <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-2">
         <span className="px-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Filter Models:</span>
-        {Object.values(ModelId).map(mId => {
-          (Object.keys(MODEL_CONFIGS) as ModelId[])
-          const config = MODEL_CONFIGS[mId];
+        {allModelIds.map(mId => {
+          const config = allConfigs[mId];
           const isActive = activeModelFilters.includes(mId);
           return (
             <button
@@ -81,7 +96,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receiptsCount, promptsCount, resu
               className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border ${
                 isActive 
                   ? `${config.color} ring-2 ring-offset-1 ring-indigo-100` 
-                  : 'bg-slate-50 text-slate-400 border-transparent grayscale'
+                  : 'bg-slate-50 text-slate-500 border-transparent grayscale'
               }`}
             >
               <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-current' : 'bg-slate-300'}`}></div>
@@ -107,7 +122,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receiptsCount, promptsCount, resu
             </h3>
             <span className="text-[10px] font-bold text-slate-400 uppercase">Last 15 filtered runs</span>
           </div>
-          <div className="h-[350px] w-full">
+          <div className="h-[350px] w-full min-h-[350px]">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -158,15 +173,28 @@ const Dashboard: React.FC<DashboardProps> = ({ receiptsCount, promptsCount, resu
               <i className="fas fa-bolt text-rose-500"></i> Latency Distribution (s)
             </h3>
             <div className="flex gap-2">
-               {activeModelFilters.map(mId => (
-                 <div key={mId} className="flex items-center gap-1">
-                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: mId === ModelId.GEMINI_PRO ? '#9333ea' : mId === ModelId.GEMINI_FLASH ? '#2563eb' : '#059669' }}></div>
-                   <span className="text-[9px] font-bold text-slate-400 uppercase">{MODEL_CONFIGS[mId].name.split(' ').pop()}</span>
-                 </div>
-               ))}
+               {activeModelFilters.map(mId => {
+                 const config = allConfigs[mId];
+                 return (
+                   <div key={mId} className="flex items-center gap-1">
+                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: (() => {
+                       const colorClass = config.color;
+                       if (colorClass.includes('green')) return '#16a34a';
+                       if (colorClass.includes('orange')) return '#ea580c';
+                       if (colorClass.includes('cyan')) return '#0891b2';
+                       if (colorClass.includes('indigo')) return '#4f46e5';
+                       if (colorClass.includes('sky')) return '#0284c7';
+                       if (colorClass.includes('violet')) return '#7c3aed';
+                       if (colorClass.includes('fuchsia')) return '#c026d3';
+                       return '#2563eb';
+                     })() }}></div>
+                     <span className="text-[9px] font-bold text-slate-400 uppercase">{config.name.split(' ').pop()}</span>
+                   </div>
+                 );
+               })}
             </div>
           </div>
-          <div className="h-[350px] w-full">
+          <div className="h-[350px] w-full min-h-[350px]">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>

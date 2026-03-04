@@ -75,7 +75,7 @@ const PromptManager: React.FC<PromptManagerProps> = ({ prompts, onAddPrompt, onD
               className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-mono text-sm"
             ></textarea>
             <p className="text-xs text-slate-400 mt-2">
-              <i className="fas fa-info-circle mr-1"></i> Gemini Flash/Pro will be instructed to return JSON based on this prompt.
+              <i className="fas fa-info-circle mr-1"></i> The AI model will be instructed to return JSON based on this prompt.
             </p>
           </div>
           <div className="flex justify-end gap-3 pt-2">

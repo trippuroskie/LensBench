@@ -2,23 +2,59 @@
 import { ModelId } from './types';
 
 export const MODEL_CONFIGS = {
-  [ModelId.GEMINI_FLASH]: {
-    name: 'Gemini 3 Flash',
+  [ModelId.GEMINI_FLASH_2]: {
+    name: 'Gemini 2.0 Flash',
     inputPrice: 0.10 / 1_000_000,
     outputPrice: 0.40 / 1_000_000,
     color: 'bg-blue-100 text-blue-700 border-blue-200'
   },
-  [ModelId.GEMINI_PRO]: {
-    name: 'Gemini 3 Pro',
+  [ModelId.GEMINI_2_5_FLASH]: {
+    name: 'Gemini 2.5 Flash',
+    inputPrice: 0.10 / 1_000_000,
+    outputPrice: 0.40 / 1_000_000,
+    color: 'bg-cyan-100 text-cyan-700 border-cyan-200'
+  },
+  [ModelId.GEMINI_2_5_PRO]: {
+    name: 'Gemini 2.5 Pro',
     inputPrice: 1.25 / 1_000_000,
     outputPrice: 5.00 / 1_000_000,
-    color: 'bg-purple-100 text-purple-700 border-purple-200'
+    color: 'bg-indigo-100 text-indigo-700 border-indigo-200'
   },
-  [ModelId.GEMINI_FLASH_LITE]: {
-    name: 'Gemini Flash Lite',
-    inputPrice: 0.05 / 1_000_000,
-    outputPrice: 0.20 / 1_000_000,
-    color: 'bg-emerald-100 text-emerald-700 border-emerald-200'
+  [ModelId.GEMINI_2_5_FLASH_LITE]: {
+    name: 'Gemini 2.5 Flash Lite',
+    inputPrice: 0.075 / 1_000_000,
+    outputPrice: 0.30 / 1_000_000,
+    color: 'bg-sky-100 text-sky-700 border-sky-200'
+  },
+  [ModelId.GEMINI_2_5_FLASH_LITE_PREVIEW]: {
+    name: 'Gemini 2.5 Lite Preview',
+    inputPrice: 0.075 / 1_000_000,
+    outputPrice: 0.30 / 1_000_000,
+    color: 'bg-sky-50 text-sky-600 border-sky-200'
+  },
+  [ModelId.GEMINI_3_FLASH_PREVIEW]: {
+    name: 'Gemini 3 Flash Preview',
+    inputPrice: 0.10 / 1_000_000,
+    outputPrice: 0.40 / 1_000_000,
+    color: 'bg-violet-100 text-violet-700 border-violet-200'
+  },
+  [ModelId.GEMINI_3_PRO_PREVIEW]: {
+    name: 'Gemini 3 Pro Preview',
+    inputPrice: 1.25 / 1_000_000,
+    outputPrice: 5.00 / 1_000_000,
+    color: 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200'
+  },
+  [ModelId.GPT_4O]: {
+    name: 'GPT-4o',
+    inputPrice: 5.00 / 1_000_000,
+    outputPrice: 15.00 / 1_000_000,
+    color: 'bg-green-100 text-green-700 border-green-200'
+  },
+  [ModelId.CLAUDE_3_5_SONNET]: {
+    name: 'Claude 3.5 Sonnet',
+    inputPrice: 3.00 / 1_000_000,
+    outputPrice: 15.00 / 1_000_000,
+    color: 'bg-orange-100 text-orange-700 border-orange-200'
   }
 };
 
