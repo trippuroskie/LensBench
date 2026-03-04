@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ViewState, Receipt, Prompt, BenchmarkResult, ModelId } from './types';
 import { MODEL_CONFIGS, SYSTEM_PROMPT_PREFIX } from './constants';
 import { OpenRouterService } from './services/openrouter';
@@ -13,6 +13,7 @@ import ReceiptManager from './components/ReceiptManager';
 import BenchmarkRunner from './components/BenchmarkRunner';
 import ResultsHistory from './components/ResultsHistory';
 import Leaderboard from './components/Leaderboard';
+import CostAccuracyMatrix from './components/CostAccuracyMatrix';
 
 // Simple IndexedDB wrapper for large binary data
 const dbPromise = new Promise<IDBDatabase>((resolve, reject) => {
@@ -39,6 +40,7 @@ const App: React.FC = () => {
     total: number;
     message: string;
   } | null>(null);
+  const cancelBenchmarkRef = useRef(false);
 
   // Initialize data
   useEffect(() => {
@@ -124,7 +126,14 @@ const App: React.FC = () => {
     setPrompts(prev => prev.filter(p => p.id !== id));
   };
 
-  const handleBatchRun = async (promptIds: string[], modelIds: ModelId[], receiptIds: string[]) => {
+  const handleBatchRun = async (
+    promptIds: string[],
+    modelIds: ModelId[],
+    receiptIds: string[],
+    experimentName: string,
+    experimentNotes: string
+  ) => {
+    cancelBenchmarkRef.current = false;
     // 1. Generate all task combinations
     const tasks: any[] = [];
     const allConfigs = { ...MODEL_CONFIGS, ...customModels };
@@ -154,6 +163,9 @@ const App: React.FC = () => {
 
     // Helper to process a single task
     const processTask = async (task: any) => {
+      if (cancelBenchmarkRef.current) {
+        return;
+      }
       try {
         const ocrService = new OpenRouterService();
         const { text, duration, rawResponse } = await ocrService.runOCR(
@@ -178,7 +190,15 @@ const App: React.FC = () => {
           receiptId: task.receipt.id,
           outputJson: text,
           timestamp: Date.now(),
-          metrics: { latencyMs: duration, accuracy, tokensUsed: totalTokens, costUsd: cost, tokensPerSecond: tps }
+          metrics: {
+            latencyMs: duration,
+            accuracy,
+            tokensUsed: totalTokens,
+            costUsd: cost,
+            tokensPerSecond: tps,
+          },
+          experimentName: experimentName || undefined,
+          experimentNotes: experimentNotes || undefined,
         };
 
         setResults(prev => [result, ...prev]);
@@ -189,14 +209,17 @@ const App: React.FC = () => {
            throw new Error(`CRITICAL_STOP: ${errorMsg}`);
         }
       } finally {
-        completed++;
-        setBenchmarkProgress(prev => prev ? { ...prev, current: completed, message: `Processed ${completed}/${total}` } : null);
+        if (!cancelBenchmarkRef.current) {
+          completed++;
+          setBenchmarkProgress(prev => prev ? { ...prev, current: completed, message: `Processed ${completed}/${total}` } : null);
+        }
       }
     };
 
     // 2. Process with concurrency limit
     try {
       for (let i = 0; i < tasks.length; i += CONCURRENCY_LIMIT) {
+        if (cancelBenchmarkRef.current) break;
         const chunk = tasks.slice(i, i + CONCURRENCY_LIMIT);
         await Promise.all(chunk.map(task => processTask(task)));
       }
@@ -208,8 +231,21 @@ const App: React.FC = () => {
       }
     }
 
+    if (cancelBenchmarkRef.current) {
+      setBenchmarkProgress(null);
+      return;
+    }
+
     setBenchmarkProgress(null);
     setView('results');
+  };
+
+  const handleCancelBenchmark = () => {
+    if (!benchmarkProgress?.isRunning) return;
+    cancelBenchmarkRef.current = true;
+    // Immediately hide overlay and go back to the benchmark configuration view
+    setBenchmarkProgress(null);
+    setView('benchmark');
   };
 
   const clearResults = () => {
@@ -220,10 +256,10 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-slate-100">
       <Sidebar currentView={view} setView={setView} />
       
-      <main className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden relative">
+      <main className="flex-1 flex flex-col min-w-0 bg-slate-50 overflow-hidden relative">
         {benchmarkProgress && (
           <div className="absolute inset-0 bg-white/80 z-50 flex flex-col items-center justify-center backdrop-blur-sm p-4">
             <div className="w-full max-w-md space-y-4">
@@ -240,6 +276,17 @@ const App: React.FC = () => {
               <p className="text-center text-xs text-slate-400">
                 Completed {benchmarkProgress.current} of {benchmarkProgress.total} runs
               </p>
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={handleCancelBenchmark}
+                  className="px-4 py-2 text-xs font-bold rounded-full border border-red-500 text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  Stop Benchmark
+                </button>
+              </div>
+              <p className="text-center text-[11px] text-slate-400 mt-1">
+                Partial results are saved even if you stop early.
+              </p>
             </div>
           </div>
         )}
@@ -251,6 +298,8 @@ const App: React.FC = () => {
                 receiptsCount={receipts.length} 
                 promptsCount={prompts.length} 
                 results={results} 
+                prompts={prompts}
+                receipts={receipts}
                 onStartBenchmark={() => setView('benchmark')}
                 customModels={customModels}
               />
@@ -272,7 +321,8 @@ const App: React.FC = () => {
                 receipts={receipts} 
                 customModels={customModels}
                 onAddCustomModel={(m) => setCustomModels(prev => ({ ...prev, [m.id]: m }))}
-                onRunBatch={handleBatchRun} 
+                onRunBatch={handleBatchRun}
+                isRunning={!!benchmarkProgress?.isRunning}
               />
             )}
             {view === 'results' && (
@@ -285,7 +335,20 @@ const App: React.FC = () => {
               />
             )}
             {view === 'leaderboard' && (
-              <Leaderboard results={results} customModels={customModels} />
+              <Leaderboard
+                results={results}
+                customModels={customModels}
+                prompts={prompts}
+                receipts={receipts}
+              />
+            )}
+            {view === 'matrix' && (
+              <CostAccuracyMatrix
+                results={results}
+                customModels={customModels}
+                prompts={prompts}
+                receipts={receipts}
+              />
             )}
           </div>
         </div>

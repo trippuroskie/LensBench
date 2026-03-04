@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BenchmarkResult, Prompt, Receipt, ModelId } from '../types';
 import { MODEL_CONFIGS } from '../constants';
 import { getFlatKeys, getValueByPath, findValueRecursively } from '../utils/evaluator';
@@ -24,6 +24,13 @@ const ResultsHistory: React.FC<ResultsHistoryProps> = ({ results, prompts, recei
   const [filterModels, setFilterModels] = useState<ModelId[]>([]);
   const [filterPrompts, setFilterPrompts] = useState<string[]>([]);
   const [filterReceipts, setFilterReceipts] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState<'all' | '30d' | '7d' | '24h'>('all');
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+  const [isPromptMenuOpen, setIsPromptMenuOpen] = useState(false);
+  const [isReceiptMenuOpen, setIsReceiptMenuOpen] = useState(false);
+  const modelMenuRef = useRef<HTMLDivElement | null>(null);
+  const promptMenuRef = useRef<HTMLDivElement | null>(null);
+  const receiptMenuRef = useRef<HTMLDivElement | null>(null);
   
   // Helpers
   const getPrompt = (id: string) => prompts.find(p => p.id === id);
@@ -35,17 +42,71 @@ const ResultsHistory: React.FC<ResultsHistoryProps> = ({ results, prompts, recei
 
   // Derived Data
   const filteredResults = useMemo(() => {
+    const now = Date.now();
+    const rangeMs =
+      dateRange === '30d' ? 30 * 24 * 60 * 60 * 1000 :
+      dateRange === '7d' ? 7 * 24 * 60 * 60 * 1000 :
+      dateRange === '24h' ? 24 * 60 * 60 * 1000 :
+      null;
+
     return results.filter(r => {
       if (filterModels.length > 0 && !filterModels.includes(r.modelId)) return false;
       if (filterPrompts.length > 0 && !filterPrompts.includes(r.promptId)) return false;
       if (filterReceipts.length > 0 && !filterReceipts.includes(r.receiptId)) return false;
+      if (rangeMs != null && now - r.timestamp > rangeMs) return false;
       return true;
     });
-  }, [results, filterModels, filterPrompts, filterReceipts]);
+  }, [results, filterModels, filterPrompts, filterReceipts, dateRange]);
 
   const uniqueModelIds = useMemo(() => Array.from(new Set(results.map(r => r.modelId))), [results]);
   const uniquePromptIds = useMemo(() => Array.from(new Set(results.map(r => r.promptId))), [results]);
   const uniqueReceiptIds = useMemo(() => Array.from(new Set(results.map(r => r.receiptId))), [results]);
+
+  const allModelsSelected = uniqueModelIds.length > 0 && filterModels.length === uniqueModelIds.length;
+  const allPromptsSelected = uniquePromptIds.length > 0 && filterPrompts.length === uniquePromptIds.length;
+  const allReceiptsSelected = uniqueReceiptIds.length > 0 && filterReceipts.length === uniqueReceiptIds.length;
+
+  useEffect(() => {
+    setFilterModels(prev => {
+      if (uniqueModelIds.length === 0) return [];
+      const next = prev.filter(id => uniqueModelIds.includes(id));
+      return next.length ? next : uniqueModelIds;
+    });
+  }, [uniqueModelIds]);
+
+  useEffect(() => {
+    setFilterPrompts(prev => {
+      if (uniquePromptIds.length === 0) return [];
+      const next = prev.filter(id => uniquePromptIds.includes(id));
+      return next.length ? next : uniquePromptIds;
+    });
+  }, [uniquePromptIds]);
+
+  useEffect(() => {
+    setFilterReceipts(prev => {
+      if (uniqueReceiptIds.length === 0) return [];
+      const next = prev.filter(id => uniqueReceiptIds.includes(id));
+      return next.length ? next : uniqueReceiptIds;
+    });
+  }, [uniqueReceiptIds]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (isModelMenuOpen && modelMenuRef.current && !modelMenuRef.current.contains(target)) {
+        setIsModelMenuOpen(false);
+      }
+      if (isPromptMenuOpen && promptMenuRef.current && !promptMenuRef.current.contains(target)) {
+        setIsPromptMenuOpen(false);
+      }
+      if (isReceiptMenuOpen && receiptMenuRef.current && !receiptMenuRef.current.contains(target)) {
+        setIsReceiptMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isModelMenuOpen, isPromptMenuOpen, isReceiptMenuOpen]);
 
   const stats = useMemo(() => {
     if (filteredResults.length === 0) return { accuracy: 0, latency: 0, cost: 0 };
@@ -64,21 +125,52 @@ const ResultsHistory: React.FC<ResultsHistoryProps> = ({ results, prompts, recei
 
   // Actions
   const toggleModelFilter = (id: ModelId) => {
-    setFilterModels(prev => prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]);
+    setFilterModels(prev => {
+      if (prev.includes(id)) {
+        return prev.length > 1 ? prev.filter(m => m !== id) : prev;
+      }
+      return [...prev, id];
+    });
   };
 
   const togglePromptFilter = (id: string) => {
-    setFilterPrompts(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
+    setFilterPrompts(prev => {
+      if (prev.includes(id)) {
+        return prev.length > 1 ? prev.filter(p => p !== id) : prev;
+      }
+      return [...prev, id];
+    });
   };
 
   const toggleReceiptFilter = (id: string) => {
-    setFilterReceipts(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]);
+    setFilterReceipts(prev => {
+      if (prev.includes(id)) {
+        return prev.length > 1 ? prev.filter(r => r !== id) : prev;
+      }
+      return [...prev, id];
+    });
+  };
+
+  const toggleAllModels = () => {
+    if (uniqueModelIds.length === 0) return;
+    setFilterModels(prev => (prev.length === uniqueModelIds.length ? [uniqueModelIds[0]] : uniqueModelIds));
+  };
+
+  const toggleAllPrompts = () => {
+    if (uniquePromptIds.length === 0) return;
+    setFilterPrompts(prev => (prev.length === uniquePromptIds.length ? [uniquePromptIds[0]] : uniquePromptIds));
+  };
+
+  const toggleAllReceipts = () => {
+    if (uniqueReceiptIds.length === 0) return;
+    setFilterReceipts(prev => (prev.length === uniqueReceiptIds.length ? [uniqueReceiptIds[0]] : uniqueReceiptIds));
   };
 
   const resetFilters = () => {
-    setFilterModels([]);
-    setFilterPrompts([]);
-    setFilterReceipts([]);
+    setFilterModels(uniqueModelIds);
+    setFilterPrompts(uniquePromptIds);
+    setFilterReceipts(uniqueReceiptIds);
+    setDateRange('all');
   };
 
   const handleRefine = async () => {
@@ -151,95 +243,115 @@ const ResultsHistory: React.FC<ResultsHistoryProps> = ({ results, prompts, recei
 
       {/* Filters Bar */}
       {results.length > 0 && (
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="flex items-start gap-4 flex-wrap">
-            {/* Model Filters */}
-            <div className="space-y-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Filter by Model</span>
-              <div className="flex flex-wrap gap-2">
-                {uniqueModelIds.map(mId => {
-                  const config = allConfigs[mId] || { name: mId, color: 'bg-slate-50 text-slate-500 border-slate-200' };
-                  return (
-                    <button
-                      key={mId}
-                      onClick={() => toggleModelFilter(mId)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                        filterModels.includes(mId)
-                        ? `${config.color} ring-2 ring-offset-1 ring-indigo-100`
-                        : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      {config.name}
+        <div className="bg-white border border-slate-200 rounded-xl md:rounded-2xl shadow-sm px-3 md:px-4 py-3 flex flex-wrap items-center gap-3">
+          <div ref={modelMenuRef} className="relative flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-tight">Models:</span>
+            <button
+              type="button"
+              onClick={() => setIsModelMenuOpen(prev => !prev)}
+              className="text-xs md:text-sm font-medium text-slate-700 min-w-44 inline-flex items-center justify-between gap-3"
+            >
+              <span>{allModelsSelected ? `All Models (${uniqueModelIds.length})` : `${filterModels.length} selected`}</span>
+              <i className={`fas fa-chevron-${isModelMenuOpen ? 'up' : 'down'} text-[10px] text-slate-400`} />
+            </button>
+            {isModelMenuOpen && (
+              <div className="absolute left-0 top-full mt-2 w-72 bg-white border border-slate-200 rounded-lg shadow-lg p-2 z-20">
+                <button type="button" onClick={toggleAllModels} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-50 text-left">
+                  <input type="checkbox" checked={allModelsSelected} readOnly className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                  <span className="text-sm font-medium text-slate-700">Select all</span>
+                </button>
+                <div className="my-1 border-t border-slate-100" />
+                <div className="max-h-52 overflow-y-auto pr-1 space-y-0.5">
+                  {uniqueModelIds.map(id => (
+                    <button key={id} type="button" onClick={() => toggleModelFilter(id)} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-50 text-left">
+                      <input type="checkbox" checked={filterModels.includes(id)} readOnly className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                      <span className="text-sm text-slate-700 truncate">{(allConfigs[id] || { name: id }).name}</span>
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
-
-            <div className="w-px h-10 bg-slate-100 hidden md:block"></div>
-
-            {/* Prompt Filters */}
-            <div className="space-y-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Filter by Prompt</span>
-              <div className="flex flex-wrap gap-2">
-                {uniquePromptIds.map(pId => {
-                  const pName = getPromptName(pId);
-                  const isSelected = filterPrompts.includes(pId);
-                  return (
-                    <button
-                      key={pId}
-                      onClick={() => togglePromptFilter(pId)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                        isSelected
-                        ? 'bg-indigo-100 text-indigo-700 border-indigo-200 ring-2 ring-offset-1 ring-indigo-100'
-                        : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      {pName}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="w-px h-10 bg-slate-100 hidden md:block"></div>
-
-            {/* Receipt Filters */}
-            <div className="space-y-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Filter by Receipt</span>
-              <div className="flex flex-wrap gap-2">
-                {uniqueReceiptIds.map(rId => {
-                  const rName = getReceipt(rId)?.name || 'Unknown Receipt';
-                  const isSelected = filterReceipts.includes(rId);
-                  return (
-                    <button
-                      key={rId}
-                      onClick={() => toggleReceiptFilter(rId)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                        isSelected
-                        ? 'bg-indigo-100 text-indigo-700 border-indigo-200 ring-2 ring-offset-1 ring-indigo-100'
-                        : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      {rName}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            )}
           </div>
-          
-          {(filterModels.length > 0 || filterPrompts.length > 0 || filterReceipts.length > 0) && (
-            <div className="pt-2 border-t border-slate-100 flex justify-between items-center">
-              <span className="text-xs text-slate-400">Showing {filteredResults.length} of {results.length} runs</span>
-              <button 
-                onClick={resetFilters}
-                className="text-xs font-bold text-rose-500 hover:underline"
-              >
-                Reset Filters
-              </button>
-            </div>
-          )}
+
+          <div ref={promptMenuRef} className="relative flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 ml-auto">
+            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-tight">Prompts:</span>
+            <button
+              type="button"
+              onClick={() => setIsPromptMenuOpen(prev => !prev)}
+              className="text-xs md:text-sm font-medium text-slate-700 min-w-40 inline-flex items-center justify-between gap-3"
+            >
+              <span>{allPromptsSelected ? `All Prompts (${uniquePromptIds.length})` : `${filterPrompts.length} selected`}</span>
+              <i className={`fas fa-chevron-${isPromptMenuOpen ? 'up' : 'down'} text-[10px] text-slate-400`} />
+            </button>
+            {isPromptMenuOpen && (
+              <div className="absolute left-0 top-full mt-2 w-72 bg-white border border-slate-200 rounded-lg shadow-lg p-2 z-20">
+                <button type="button" onClick={toggleAllPrompts} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-50 text-left">
+                  <input type="checkbox" checked={allPromptsSelected} readOnly className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                  <span className="text-sm font-medium text-slate-700">Select all</span>
+                </button>
+                <div className="my-1 border-t border-slate-100" />
+                <div className="max-h-52 overflow-y-auto pr-1 space-y-0.5">
+                  {uniquePromptIds.map(id => (
+                    <button key={id} type="button" onClick={() => togglePromptFilter(id)} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-50 text-left">
+                      <input type="checkbox" checked={filterPrompts.includes(id)} readOnly className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                      <span className="text-sm text-slate-700 truncate">{getPromptName(id)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div ref={receiptMenuRef} className="relative flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-tight">Receipts:</span>
+            <button
+              type="button"
+              onClick={() => setIsReceiptMenuOpen(prev => !prev)}
+              className="text-xs md:text-sm font-medium text-slate-700 min-w-40 inline-flex items-center justify-between gap-3"
+            >
+              <span>{allReceiptsSelected ? `All Receipts (${uniqueReceiptIds.length})` : `${filterReceipts.length} selected`}</span>
+              <i className={`fas fa-chevron-${isReceiptMenuOpen ? 'up' : 'down'} text-[10px] text-slate-400`} />
+            </button>
+            {isReceiptMenuOpen && (
+              <div className="absolute left-0 top-full mt-2 w-72 bg-white border border-slate-200 rounded-lg shadow-lg p-2 z-20">
+                <button type="button" onClick={toggleAllReceipts} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-50 text-left">
+                  <input type="checkbox" checked={allReceiptsSelected} readOnly className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                  <span className="text-sm font-medium text-slate-700">Select all</span>
+                </button>
+                <div className="my-1 border-t border-slate-100" />
+                <div className="max-h-52 overflow-y-auto pr-1 space-y-0.5">
+                  {uniqueReceiptIds.map(id => (
+                    <button key={id} type="button" onClick={() => toggleReceiptFilter(id)} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-50 text-left">
+                      <input type="checkbox" checked={filterReceipts.includes(id)} readOnly className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                      <span className="text-sm text-slate-700 truncate">{getReceipt(id)?.name || 'Unknown Receipt'}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+            <i className="fas fa-calendar-day text-slate-400 text-xs" />
+            <select
+              className="bg-transparent border-none text-xs md:text-sm font-medium focus:ring-0 p-0 pr-6 cursor-pointer"
+              value={dateRange}
+              onChange={e => setDateRange(e.target.value as any)}
+            >
+              <option value="30d">Last 30 Days</option>
+              <option value="7d">Last 7 Days</option>
+              <option value="24h">Last 24 Hours</option>
+              <option value="all">All Time</option>
+            </select>
+          </div>
+
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="text-xs font-bold text-rose-500 hover:underline ml-auto"
+          >
+            Reset Filters
+          </button>
         </div>
       )}
 
