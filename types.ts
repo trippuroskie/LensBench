@@ -56,4 +56,4 @@ export interface BenchmarkResult {
   metrics: BenchmarkMetrics;
 }
 
-export type ViewState = 'dashboard' | 'prompts' | 'receipts' | 'benchmark' | 'results' | 'leaderboard' | 'models';
+export type ViewState = 'dashboard' | 'prompts' | 'receipts' | 'benchmark' | 'results' | 'leaderboard' | 'models' | 'compare' | 'matrix';

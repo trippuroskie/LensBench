@@ -14,6 +14,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
     { id: 'receipts', label: 'Receipts', icon: 'fa-receipt' },
     { id: 'benchmark', label: 'New Benchmark', icon: 'fa-play' },
     { id: 'results', label: 'Results', icon: 'fa-list-check' },
+    { id: 'compare', label: 'Compare', icon: 'fa-code-compare' },
     { id: 'leaderboard', label: 'Leaderboard', icon: 'fa-trophy' },
   ];
 

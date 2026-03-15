@@ -12,6 +12,7 @@ import PromptManager from './components/PromptManager';
 import ReceiptManager from './components/ReceiptManager';
 import BenchmarkRunner from './components/BenchmarkRunner';
 import ResultsHistory from './components/ResultsHistory';
+import Compare from './components/Compare';
 import Leaderboard from './components/Leaderboard';
 import CostAccuracyMatrix from './components/CostAccuracyMatrix';
 
@@ -332,6 +333,14 @@ const App: React.FC = () => {
                 receipts={receipts} 
                 customModels={customModels}
                 onClear={clearResults}
+              />
+            )}
+            {view === 'compare' && (
+              <Compare
+                results={results}
+                prompts={prompts}
+                receipts={receipts}
+                customModels={customModels}
               />
             )}
             {view === 'leaderboard' && (
