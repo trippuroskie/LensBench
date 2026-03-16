@@ -8,7 +8,7 @@ interface BenchmarkRunnerProps {
   receipts: Receipt[];
   customModels: Record<string, CustomModel>;
   onAddCustomModel: (model: CustomModel) => void;
-  onRunBatch: (promptIds: string[], modelIds: ModelId[], receiptIds: string[]) => Promise<void>;
+  onRunBatch: (promptIds: string[], modelIds: ModelId[], receiptIds: string[], runs: number) => Promise<void>;
 }
 
 const BenchmarkRunner: React.FC<BenchmarkRunnerProps> = ({ 
@@ -21,6 +21,7 @@ const BenchmarkRunner: React.FC<BenchmarkRunnerProps> = ({
   const [selectedPrompts, setSelectedPrompts] = useState<string[]>(prompts[0] ? [prompts[0].id] : []);
   const [selectedModels, setSelectedModels] = useState<ModelId[]>(['google/gemini-2.0-flash-001']);
   const [selectedReceipts, setSelectedReceipts] = useState<string[]>([]);
+  const [runs, setRuns] = useState<number>(1);
   
   // Custom Model Form State
   const [isAddingModel, setIsAddingModel] = useState(false);
@@ -62,11 +63,11 @@ const BenchmarkRunner: React.FC<BenchmarkRunnerProps> = ({
 
   const handleLaunch = () => {
     if (selectedPrompts.length === 0 || selectedModels.length === 0 || selectedReceipts.length === 0) return;
-    onRunBatch(selectedPrompts, selectedModels, selectedReceipts);
+    onRunBatch(selectedPrompts, selectedModels, selectedReceipts, runs);
   };
 
   const canRun = selectedPrompts.length > 0 && selectedModels.length > 0 && selectedReceipts.length > 0;
-  const totalRuns = selectedPrompts.length * selectedModels.length * selectedReceipts.length;
+  const totalRuns = selectedPrompts.length * selectedModels.length * selectedReceipts.length * runs;
 
   return (
     <div className="space-y-8">
@@ -164,6 +165,25 @@ const BenchmarkRunner: React.FC<BenchmarkRunnerProps> = ({
             </div>
           </section>
 
+          <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Step 3: Iterations</h3>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">Number of times to run each combination. Higher runs give more statistically significant results but cost more.</p>
+            <div className="flex items-center gap-4">
+              <input 
+                type="range" 
+                min="1" 
+                max="10" 
+                step="1"
+                value={runs}
+                onChange={(e) => setRuns(parseInt(e.target.value))}
+                className="w-full accent-indigo-600"
+              />
+              <span className="font-bold text-lg text-slate-700 w-8 text-center">{runs}</span>
+            </div>
+          </section>
+
           <button
             onClick={handleLaunch}
             disabled={!canRun}
@@ -179,7 +199,7 @@ const BenchmarkRunner: React.FC<BenchmarkRunnerProps> = ({
         <div className="lg:col-span-2">
           <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-full">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Step 3: Select Dataset</h3>
+              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Step 4: Select Dataset</h3>
               <button 
                 onClick={() => setSelectedReceipts(selectedReceipts.length === receipts.length ? [] : receipts.map(r => r.id))}
                 className="text-xs font-bold text-indigo-600 hover:underline"

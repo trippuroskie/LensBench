@@ -478,7 +478,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receiptsCount, promptsCount, resu
           helper={filteredResults.length ? 'Across filtered runs' : 'No data yet'}
         />
         <StatCard
-          title="Avg. Latency"
+          title="Avg. Inference Time"
           value={`${avgLatencySeconds.toFixed(1)}s`}
           icon="fa-stopwatch"
           color="rose"
@@ -553,7 +553,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receiptsCount, promptsCount, resu
         <div className="bg-white p-6 rounded-xl md:rounded-2xl border border-slate-200 shadow-sm min-w-0">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold flex items-center gap-2">
-              <i className="fas fa-bolt text-rose-500"></i> Latency Distribution (s)
+              <i className="fas fa-bolt text-rose-500"></i> Inference Time Distribution (s)
             </h3>
             <i className="fas fa-ellipsis-h text-slate-400 text-sm" />
           </div>
@@ -608,7 +608,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receiptsCount, promptsCount, resu
                   Accuracy
                 </th>
                 <th className="px-4 md:px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200">
-                  Latency
+                  Inference Time
                 </th>
                 <th className="px-4 md:px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200">
                   Cost

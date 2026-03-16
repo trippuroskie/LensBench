@@ -16,7 +16,7 @@ const METRIC_CONFIG: Record<
     format: (v) => `${Math.round(v * 100)}%`,
   },
   latency: {
-    label: 'Latency',
+    label: 'Inference Time',
     key: 'latencyMs',
     higherBetter: false,
     format: (v) => `${(v / 1000).toFixed(2)}s`,

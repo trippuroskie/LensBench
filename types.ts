@@ -54,6 +54,7 @@ export interface BenchmarkResult {
   outputJson: string;
   timestamp: number;
   metrics: BenchmarkMetrics;
+  runIndex?: number;
 }
 
 export type ViewState = 'dashboard' | 'prompts' | 'receipts' | 'benchmark' | 'results' | 'leaderboard' | 'models' | 'compare' | 'matrix';

@@ -1,6 +1,6 @@
 # LensBench – Agent Guide
 
-LensBench is a **benchmarking tool for OCR pipelines**. Users evaluate vision/LLM models (via OpenRouter) on receipt images with configurable prompts and ground-truth JSON, and compare accuracy, latency, cost, and throughput.
+LensBench is a **benchmarking tool for OCR pipelines**. Users evaluate vision/LLM models (via OpenRouter) on receipt images with configurable prompts and ground-truth JSON, and compare accuracy, inference time, cost, and throughput.
 
 ## Stack
 
@@ -13,8 +13,8 @@ LensBench is a **benchmarking tool for OCR pipelines**. Users evaluate vision/LL
 - **Prompts** – OCR instructions; versioned and stored in state.
 - **Receipts** – Images plus ground-truth JSON used to compute extraction accuracy.
 - **Models** – Built-in list in `constants.tsx` + `types.ts`; users can add custom OpenRouter model IDs via the Benchmark UI (stored in `customModels`).
-- **Benchmark** – Runs a selected set of (prompt × model × receipt), calls OpenRouter per task, then records accuracy, latency, cost, tokens.
-- **Results / Leaderboard** – Results are per-run; Leaderboard aggregates by model and supports ranking by accuracy, latency, cost, or tokens/sec.
+- **Benchmark** – Runs a selected set of (prompt × model × receipt), calls OpenRouter per task, then records accuracy, inference time, cost, tokens.
+- **Results / Leaderboard** – Results are per-run; Leaderboard aggregates by model and supports ranking by accuracy, inference time, cost, or tokens/sec.
 
 ## Project Layout
 

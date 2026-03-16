@@ -20,12 +20,106 @@ const getHexColor = (colorClass: string) => {
 };
 
 const CustomLabel = (props: any) => {
-  const { x, y, value } = props;
-  if (!x || !y || !value) return null;
+  const { x, y, value, positionsRef, occupiedRef } = props;
+  if (x == null || y == null || !value) return null;
+
+  const charWidth = 6.5;
+  const textWidth = value.length * charWidth;
+  const textHeight = 16;
+
+  let finalPos = positionsRef?.current?.[value];
+
+  if (!finalPos && positionsRef && occupiedRef) {
+    const positions = [
+      { dx: 12, dy: 0, anchor: 'start' },
+      { dx: -12, dy: 0, anchor: 'end' },
+      { dx: 0, dy: -16, anchor: 'middle' },
+      { dx: 0, dy: 16, anchor: 'middle' },
+      { dx: 12, dy: -14, anchor: 'start' },
+      { dx: 12, dy: 14, anchor: 'start' },
+      { dx: -12, dy: -14, anchor: 'end' },
+      { dx: -12, dy: 14, anchor: 'end' },
+      { dx: 24, dy: 0, anchor: 'start' },
+      { dx: -24, dy: 0, anchor: 'end' },
+      { dx: 0, dy: -28, anchor: 'middle' },
+      { dx: 0, dy: 28, anchor: 'middle' },
+    ];
+
+    let found = false;
+
+    for (const pos of positions) {
+      let boxX = x + pos.dx;
+      let boxY = y + pos.dy;
+
+      if (pos.anchor === 'start') {
+        // boxX is left edge
+      } else if (pos.anchor === 'end') {
+        boxX -= textWidth;
+      } else {
+        boxX -= textWidth / 2;
+      }
+      
+      const boxTop = boxY - textHeight / 2;
+
+      const padding = 4;
+      const isCollision = occupiedRef.current.some((rect: any) => {
+        return !(
+          boxX + textWidth + padding < rect.x ||
+          boxX - padding > rect.x + rect.w ||
+          boxTop + textHeight + padding < rect.y ||
+          boxTop - padding > rect.y + rect.h
+        );
+      });
+
+      if (!isCollision) {
+        finalPos = pos;
+        found = true;
+        occupiedRef.current.push({ x: boxX, y: boxTop, w: textWidth, h: textHeight });
+        break;
+      }
+    }
+
+    if (!found) {
+      finalPos = positions[0];
+    }
+    
+    positionsRef.current[value] = finalPos;
+  }
+
+  if (!finalPos) {
+    finalPos = { dx: 12, dy: 0, anchor: 'start' };
+  }
+
   return (
     <g>
-      <text x={x} y={y - 12} fill="#475569" fontSize={11} fontWeight={600} textAnchor="middle" stroke="#ffffff" strokeWidth={4} strokeLinejoin="round">{value}</text>
-      <text x={x} y={y - 12} fill="#475569" fontSize={11} fontWeight={600} textAnchor="middle">{value}</text>
+      {(Math.abs(finalPos.dx) > 12 || Math.abs(finalPos.dy) > 12) && (
+        <line x1={x} y1={y} x2={x + finalPos.dx} y2={y + finalPos.dy} stroke="#94a3b8" strokeWidth={1} strokeDasharray="2 2" />
+      )}
+      <text 
+        x={x + finalPos.dx} 
+        y={y + finalPos.dy} 
+        fill="#475569" 
+        fontSize={11} 
+        fontWeight={600} 
+        textAnchor={finalPos.anchor as any} 
+        dominantBaseline="central" 
+        stroke="#ffffff" 
+        strokeWidth={4} 
+        strokeLinejoin="round"
+      >
+        {value}
+      </text>
+      <text 
+        x={x + finalPos.dx} 
+        y={y + finalPos.dy} 
+        fill="#475569" 
+        fontSize={11} 
+        fontWeight={600} 
+        textAnchor={finalPos.anchor as any} 
+        dominantBaseline="central"
+      >
+        {value}
+      </text>
     </g>
   );
 };
@@ -45,6 +139,8 @@ const Compare: React.FC<CompareProps> = ({ results, prompts, receipts, customMod
   const [filterReceipts, setFilterReceipts] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<'all' | '30d' | '7d' | '24h'>('all');
   const [xAxisMetric, setXAxisMetric] = useState<'cost' | 'latency'>('cost');
+  const [useLogScale, setUseLogScale] = useState(false);
+  const [baselineModelId, setBaselineModelId] = useState<string | null>(null);
 
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
   const [isPromptMenuOpen, setIsPromptMenuOpen] = useState(false);
@@ -214,13 +310,21 @@ const Compare: React.FC<CompareProps> = ({ results, prompts, receipts, customMod
       return {
         id: r.modelId,
         name: config.name,
-        cost: r.metrics.costUsd,
-        latency: r.metrics.latencyMs / 1000,
+        cost: Math.max(r.metrics.costUsd, 0.00001),
+        latency: Math.max(r.metrics.latencyMs / 1000, 0.001),
         accuracy: Math.round(r.metrics.accuracy * 100),
         color: getHexColor(config.color || '')
       };
     });
   }, [comparisonResults, allConfigs]);
+
+  const labelPositionsRef = useRef<Record<string, {dx: number, dy: number, anchor: string}>>({});
+  const occupiedSpacesRef = useRef<{x: number, y: number, w: number, h: number}[]>([]);
+
+  useEffect(() => {
+    labelPositionsRef.current = {};
+    occupiedSpacesRef.current = [];
+  }, [chartData, xAxisMetric, useLogScale]);
 
   const avgCost = chartData.length > 0 ? chartData.reduce((acc, curr) => acc + curr.cost, 0) / chartData.length : 0;
   const avgLatency = chartData.length > 0 ? chartData.reduce((acc, curr) => acc + curr.latency, 0) / chartData.length : 0;
@@ -345,6 +449,20 @@ const Compare: React.FC<CompareProps> = ({ results, prompts, receipts, customMod
             </select>
           </div>
 
+          <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-tight">Baseline:</span>
+            <select
+              className="bg-transparent border-none text-xs md:text-sm font-medium focus:ring-0 p-0 pr-6 cursor-pointer"
+              value={baselineModelId || ''}
+              onChange={e => setBaselineModelId(e.target.value || null)}
+            >
+              <option value="">None</option>
+              {filterModels.map(id => (
+                <option key={id} value={id}>{(allConfigs[id] || { name: id }).name}</option>
+              ))}
+            </select>
+          </div>
+
           <button
             type="button"
             onClick={resetFilters}
@@ -365,8 +483,8 @@ const Compare: React.FC<CompareProps> = ({ results, prompts, receipts, customMod
           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-4">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Accuracy vs. {xAxisMetric === 'cost' ? 'Cost' : 'Latency'}</h3>
-                <p className="text-xs text-slate-500 mt-1">Compare model performance against execution {xAxisMetric}.</p>
+                <h3 className="text-lg font-bold text-slate-900">Accuracy vs. {xAxisMetric === 'cost' ? 'Cost' : 'Inference Time'}</h3>
+                <p className="text-xs text-slate-500 mt-1">Compare model performance against execution {xAxisMetric === 'cost' ? 'cost' : 'time'}.</p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
@@ -380,7 +498,15 @@ const Compare: React.FC<CompareProps> = ({ results, prompts, receipts, customMod
                     onClick={() => setXAxisMetric('latency')}
                     className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${xAxisMetric === 'latency' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                   >
-                    Latency
+                    Inference Time
+                  </button>
+                </div>
+                <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+                  <button 
+                    onClick={() => setUseLogScale(!useLogScale)}
+                    className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${useLogScale ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Log Scale
                   </button>
                 </div>
                 <div className="flex items-center gap-2 text-xs font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
@@ -392,17 +518,18 @@ const Compare: React.FC<CompareProps> = ({ results, prompts, receipts, customMod
             
             <div className="h-[450px] w-full mt-4">
               <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 20, right: 30, bottom: 20, left: 10 }}>
+                <ScatterChart margin={{ top: 20, right: 150, bottom: 20, left: 10 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                   <XAxis 
                     type="number" 
                     dataKey={xAxisMetric}
-                    name={xAxisMetric === 'cost' ? 'Cost' : 'Latency'}
+                    name={xAxisMetric === 'cost' ? 'Cost' : 'Inference Time'}
                     unit={xAxisMetric === 'cost' ? '$' : 's'}
                     stroke="#94a3b8"
                     tick={{ fontSize: 12 }}
                     tickFormatter={(val) => xAxisMetric === 'cost' ? `$${val.toFixed(4)}` : `${val.toFixed(2)}s`}
-                    domain={[0, 'auto']}
+                    scale={useLogScale ? 'log' : 'linear'}
+                    domain={useLogScale ? [(dataMin: number) => dataMin / 2, (dataMax: number) => dataMax * 2] : [0, 'auto']}
                   />
                   <YAxis 
                     type="number" 
@@ -426,7 +553,7 @@ const Compare: React.FC<CompareProps> = ({ results, prompts, receipts, customMod
                                 <span>Accuracy:</span> <span className="font-bold text-slate-900">{data.accuracy}%</span>
                               </p>
                               <p className="text-xs text-slate-600 flex justify-between gap-4">
-                                <span>{xAxisMetric === 'cost' ? 'Cost:' : 'Latency:'}</span> 
+                                <span>{xAxisMetric === 'cost' ? 'Cost:' : 'Inference Time:'}</span> 
                                 <span className="font-bold text-slate-900">
                                   {xAxisMetric === 'cost' ? `$${data.cost.toFixed(5)}` : `${data.latency.toFixed(2)}s`}
                                 </span>
@@ -444,7 +571,7 @@ const Compare: React.FC<CompareProps> = ({ results, prompts, receipts, customMod
                     <>
                       {/* Top-Left Quadrant: High Accuracy, Low Cost/Latency */}
                       <ReferenceArea 
-                        x1={0} 
+                        x1={useLogScale ? (xAxisMetric === 'cost' ? 0.00001 : 0.001) : 0} 
                         x2={currentAvgX} 
                         y1={avgAccuracy} 
                         y2={100} 
@@ -459,7 +586,7 @@ const Compare: React.FC<CompareProps> = ({ results, prompts, receipts, customMod
                   
                   {chartData.map((entry) => (
                     <Scatter key={entry.id} name={entry.name} data={[entry]} fill={entry.color}>
-                      <LabelList dataKey="name" content={<CustomLabel />} />
+                      <LabelList dataKey="name" content={(props: any) => <CustomLabel {...props} positionsRef={labelPositionsRef} occupiedRef={occupiedSpacesRef} />} />
                     </Scatter>
                   ))}
                 </ScatterChart>
@@ -471,25 +598,76 @@ const Compare: React.FC<CompareProps> = ({ results, prompts, receipts, customMod
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {comparisonResults.map(result => {
               const config = allConfigs[result.modelId] || { name: result.modelId };
+              
+              let accuracyDelta = null;
+              let latencyDelta = null;
+              let costDelta = null;
+              
+              if (baselineModelId && baselineModelId !== result.modelId) {
+                const baselineResult = comparisonResults.find(r => r.modelId === baselineModelId);
+                if (baselineResult) {
+                  accuracyDelta = (result.metrics.accuracy - baselineResult.metrics.accuracy) * 100;
+                  
+                  // Calculate percentage differences
+                  if (baselineResult.metrics.latencyMs > 0) {
+                    latencyDelta = ((result.metrics.latencyMs - baselineResult.metrics.latencyMs) / baselineResult.metrics.latencyMs) * 100;
+                  } else {
+                    latencyDelta = 0;
+                  }
+                  
+                  if (baselineResult.metrics.costUsd > 0) {
+                    costDelta = ((result.metrics.costUsd - baselineResult.metrics.costUsd) / baselineResult.metrics.costUsd) * 100;
+                  } else {
+                    costDelta = 0;
+                  }
+                }
+              }
+              
               return (
-                <div key={result.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col gap-3">
+                <div key={result.id} className={`bg-white border ${baselineModelId === result.modelId ? 'border-indigo-400 shadow-md ring-1 ring-indigo-400' : 'border-slate-200 shadow-sm'} rounded-2xl p-4 flex flex-col gap-3 relative`}>
+                  {baselineModelId === result.modelId && (
+                    <div className="absolute -top-2.5 right-4 bg-indigo-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      Baseline
+                    </div>
+                  )}
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <span className="font-bold text-slate-800 text-sm">{config.name}</span>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-slate-400 font-medium">({result.runCount} runs)</span>
-                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${getAccuracyColor(result.metrics.accuracy)}`}>
-                        {Math.round(result.metrics.accuracy * 100)}% Match
-                      </span>
+                      <div className="flex flex-col items-end">
+                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${getAccuracyColor(result.metrics.accuracy)}`}>
+                          {Math.round(result.metrics.accuracy * 100)}% Match
+                        </span>
+                        {accuracyDelta !== null && (
+                          <span className={`text-[10px] font-bold mt-1 ${accuracyDelta > 0 ? 'text-emerald-500' : accuracyDelta < 0 ? 'text-rose-500' : 'text-slate-400'}`}>
+                            {accuracyDelta > 0 ? '+' : ''}{accuracyDelta.toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-slate-50 p-2 rounded-lg">
-                      <p className="text-[10px] text-slate-400 uppercase font-bold">Avg Latency</p>
-                      <p className="text-sm font-bold text-slate-700">{(result.metrics.latencyMs / 1000).toFixed(2)}s</p>
+                    <div className="bg-slate-50 p-2 rounded-lg flex flex-col justify-between">
+                      <p className="text-[10px] text-slate-400 uppercase font-bold">Avg Inference Time</p>
+                      <div className="flex items-end justify-between mt-1">
+                        <p className="text-sm font-bold text-slate-700">{(result.metrics.latencyMs / 1000).toFixed(2)}s</p>
+                        {latencyDelta !== null && (
+                          <span className={`text-[10px] font-bold ${latencyDelta < 0 ? 'text-emerald-500' : latencyDelta > 0 ? 'text-rose-500' : 'text-slate-400'}`}>
+                            {latencyDelta > 0 ? '+' : ''}{latencyDelta.toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="bg-slate-50 p-2 rounded-lg">
+                    <div className="bg-slate-50 p-2 rounded-lg flex flex-col justify-between">
                       <p className="text-[10px] text-slate-400 uppercase font-bold">Avg Cost</p>
-                      <p className="text-sm font-bold text-slate-700">${result.metrics.costUsd.toFixed(5)}</p>
+                      <div className="flex items-end justify-between mt-1">
+                        <p className="text-sm font-bold text-slate-700">${result.metrics.costUsd.toFixed(5)}</p>
+                        {costDelta !== null && (
+                          <span className={`text-[10px] font-bold ${costDelta < 0 ? 'text-emerald-500' : costDelta > 0 ? 'text-rose-500' : 'text-slate-400'}`}>
+                            {costDelta > 0 ? '+' : ''}{costDelta.toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -223,7 +223,7 @@ const ResultsHistory: React.FC<ResultsHistoryProps> = ({ results, prompts, recei
                  <span className="text-lg font-bold text-emerald-700">{Math.round(stats.accuracy * 100)}%</span>
               </div>
               <div className="bg-indigo-50 px-4 py-2 rounded-lg border border-indigo-100 flex flex-col items-start min-w-[100px]">
-                 <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Avg Latency</span>
+                 <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Avg Inference Time</span>
                  <span className="text-lg font-bold text-indigo-700">{(stats.latency / 1000).toFixed(2)}s</span>
               </div>
               <div className="bg-amber-50 px-4 py-2 rounded-lg border border-amber-100 flex flex-col items-start min-w-[100px]">
@@ -363,7 +363,7 @@ const ResultsHistory: React.FC<ResultsHistoryProps> = ({ results, prompts, recei
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Model / Time</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Prompt & Receipt</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Accuracy</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Latency</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Inference Time</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Cost</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Action</th>
               </tr>
@@ -505,7 +505,7 @@ const ResultsHistory: React.FC<ResultsHistoryProps> = ({ results, prompts, recei
                       <p className="text-sm font-bold text-slate-900">${selectedResult.metrics.costUsd.toFixed(5)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-slate-400 uppercase">Latency</p>
+                      <p className="text-[10px] text-slate-400 uppercase">Inference Time</p>
                       <p className="text-sm font-bold text-slate-900">{(selectedResult.metrics.latencyMs / 1000).toFixed(2)}s</p>
                     </div>
                   </div>

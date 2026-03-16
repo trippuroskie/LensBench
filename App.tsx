@@ -131,26 +131,30 @@ const App: React.FC = () => {
     promptIds: string[],
     modelIds: ModelId[],
     receiptIds: string[],
-    experimentName: string,
-    experimentNotes: string
+    runs: number = 1,
+    experimentName?: string,
+    experimentNotes?: string
   ) => {
     cancelBenchmarkRef.current = false;
     // 1. Generate all task combinations
     const tasks: any[] = [];
     const allConfigs = { ...MODEL_CONFIGS, ...customModels };
 
-    for (const modelId of modelIds) {
-      for (const promptId of promptIds) {
-        for (const receiptId of receiptIds) {
-          const prompt = prompts.find(p => p.id === promptId);
-          const receipt = receipts.find(r => r.id === receiptId);
-          if (prompt && receipt) {
-            tasks.push({ 
-              modelId, 
-              prompt, 
-              receipt, 
-              config: allConfigs[modelId] || { name: modelId, inputPrice: 0, outputPrice: 0 } 
-            });
+    for (let run = 0; run < runs; run++) {
+      for (const modelId of modelIds) {
+        for (const promptId of promptIds) {
+          for (const receiptId of receiptIds) {
+            const prompt = prompts.find(p => p.id === promptId);
+            const receipt = receipts.find(r => r.id === receiptId);
+            if (prompt && receipt) {
+              tasks.push({ 
+                modelId, 
+                prompt, 
+                receipt, 
+                config: allConfigs[modelId] || { name: modelId, inputPrice: 0, outputPrice: 0 },
+                runIndex: run
+              });
+            }
           }
         }
       }
@@ -198,8 +202,7 @@ const App: React.FC = () => {
             costUsd: cost,
             tokensPerSecond: tps,
           },
-          experimentName: experimentName || undefined,
-          experimentNotes: experimentNotes || undefined,
+          runIndex: task.runIndex,
         };
 
         setResults(prev => [result, ...prev]);

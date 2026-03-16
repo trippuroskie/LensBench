@@ -1,7 +1,7 @@
 {
   "name": "LensBench",
   "short_name": "LensBench",
-  "description": "A comprehensive benchmarking tool for OCR pipelines. Evaluate prompt versions, different OpenRouter models, and receipt datasets with real-time accuracy, latency, and cost metrics.",
+  "description": "A comprehensive benchmarking tool for OCR pipelines. Evaluate prompt versions, different OpenRouter models, and receipt datasets with real-time accuracy, inference time, and cost metrics.",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#f8fafc",
