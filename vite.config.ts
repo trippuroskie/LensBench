@@ -7,7 +7,11 @@ export default defineConfig(({ mode }) => {
     return {
       server: {
         port: 3000,
-        host: '0.0.0.0',
+        // Bound to localhost on purpose: the bundle this server hands out has
+        // OPENROUTER_API_KEY inlined (see `define` below), so exposing it on
+        // 0.0.0.0 would hand the key to anyone on the same network.
+        // Need LAN access anyway? Run: npm run dev -- --host
+        host: 'localhost',
       },
       plugins: [react()],
       define: {

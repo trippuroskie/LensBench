@@ -100,7 +100,7 @@ const App: React.FC = () => {
     } catch (e) {
       console.error("Failed to save metadata to localStorage:", e);
     }
-  }, [prompts, results]);
+  }, [prompts, results, customModels]);
 
   const addReceipt = (newReceipt: Receipt) => {
     setReceipts(prev => [...prev, newReceipt]);

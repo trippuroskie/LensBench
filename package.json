@@ -1,17 +1,34 @@
 {
-  "name": "lensbench:-ocr-pipeline-evaluator",
-  "private": true,
+  "name": "lensbench",
   "version": "0.0.0",
+  "private": true,
+  "description": "Benchmarking harness for OCR pipelines built on vision LLMs - compare accuracy, inference time, and cost across models and prompt versions.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trippuroskie/LensBench.git"
+  },
+  "keywords": [
+    "ocr",
+    "benchmark",
+    "vision-llm",
+    "openrouter",
+    "document-extraction",
+    "evaluation"
+  ],
   "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "recharts": "^3.6.0",
+    "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "react": "^19.2.3"
+    "recharts": "^3.6.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
